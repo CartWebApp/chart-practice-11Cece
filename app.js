@@ -28,7 +28,7 @@ dataPreview.textContent = JSON.stringify(chartData.slice(0, 6), null, 2);
 // --- Main render ---
 renderBtn.addEventListener("click", () => {
   const chartType = chartTypeSelect.value;
-  const year = yearSelect.value;
+  const year = Number(yearSelect.value);
   const title = titleSelect.value;
   const genre = genreSelect.value;
 
@@ -56,14 +56,14 @@ function barByNeighborhood(year, genre) {
   const rows = chartData.filter(r => r.year === year);
 
   const labels = rows.map(r => r.title);
-  const values = rows.map(r => r[genre]);
+  const values = rows.map(r => r.unitsM);
 
   return {
     type: "bar",
     data: {
       labels,
       datasets: [{
-        label: `${genre} in ${year}`,
+        label: `${genre} sales (Millions) in ${year}`,
         data: values
       }]
     },
@@ -73,8 +73,8 @@ function barByNeighborhood(year, genre) {
         title: { display: true, text: `Title comparison (${year})` }
       },
       scales: {
-        y: { title: { display: true, text: genre } },
-        x: { title: { display: true, text: "Title" } }
+        y: { title: { display: true, text: "Units Sold (Millions)" } },
+        x: { title: { display: true, text: "Game Title" } }
       }
     }
   };
@@ -97,11 +97,11 @@ function lineOverTime(title, genre) {
     options: {
       responsive: true,
       plugins: {
-        title: { display: true, text: `Trends over time: ${title}` }
+        title: { display: true, text: `Performance Trend Over Time: ${title}` }
       },
       scales: {
         y: { title: { display: true, text: "Value" } },
-        x: { title: { display: true, text: "Year" } }
+        x: { title: { display: true, text: "Year (Region)" } }
       }
     }
   };
