@@ -44,7 +44,7 @@ renderBtn.addEventListener("click", () => {
 // --- Students: you’ll edit / extend these functions ---
 function buildConfig(type, { year, title, genre }) {
   if (type === "bar") return barByNeighborhood(year, genre);
-  if (type === "line") return lineOverTime(title, ["racing", "revenueUSD"]);
+  if (type === "line") return lineOverTime(title);
   if (type === "scatter") return scatterTripsVsTemp(title);
   if (type === "doughnut") return doughnutMemberVsCasual(year, title);
   if (type === "radar") return radarCompareNeighborhoods(year);
@@ -80,16 +80,24 @@ function barByNeighborhood(year, genre) {
   };
 }
 
-// Task B: LINE — trend over time for one neighborhood (2 datasets)
-function lineOverTime(title, genre) {
-  const rows = chartData.filter(r => r.title === title);
+// Task B: LINE — trend over time for one game title (units vs revenue)
+function lineOverTime(title) {
+  const rows = chartData.filter(r => r.title === title).sort((a, b) => a.year - b.year);
 
   const labels = rows.map(r => r.year);
 
-  const datasets = genre.map(m => ({
-    label: m,
-    data: rows.map(r => r[m])
-  }));
+  const datasets = [
+    {
+      label: "Units Sold (Millions)",
+      data: rows.map(r => r.unitsM),
+      yAxisID: "y"
+    },
+    {
+      label: "Revenue (USD Millions)",
+      data: rows.map(r => r.revenueUSD),
+      yAxisID: "y1"
+    }
+  ];
 
   return {
     type: "line",
@@ -97,81 +105,104 @@ function lineOverTime(title, genre) {
     options: {
       responsive: true,
       plugins: {
-        title: { display: true, text: `Performance Trend Over Time: ${title}` }
+        title: { display: true, text: `Sales Trend Over Time: ${title}` }
       },
       scales: {
-        y: { title: { display: true, text: "Value" } },
-        x: { title: { display: true, text: "Year (Region)" } }
+        y: { 
+          type: "linear",
+          display: true,
+          position: "left",
+          title: { display: true, text: "Units (Millions)" }
+        },
+        y1: {
+          type: "linear",
+          display: true,
+          position: "right",
+          title: { display: true, text: "Revenue (USD Millions)" },
+          beginAtZero: true
+        },
+        x: { title: { display: true, text: "Year" } }
       }
     }
   };
 }
 
-// SCATTER — relationship between temperature and trips
+// SCATTER — relationship between units sold and revenue for a title
 function scatterTripsVsTemp(title) {
   const rows = chartData.filter(r => r.title === title);
 
-  const points = rows.map(r => ({ x: r.sim, y: r.racing }));
+  const points = rows.map(r => ({ x: r.unitsM, y: r.revenueUSD }));
 
   return {
     type: "scatter",
     data: {
       datasets: [{
-        label: `Racing vs Sim (${title})`,
+        label: `${title} Analysis`,
         data: points
       }]
     },
     options: {
       plugins: {
-        title: { display: true, text: `Does temperature affect trips? (${title})` }
+        title: { display: true, text: `Units vs Revenue: ${title}` }
       },
       scales: {
-        x: { title: { display: true, text: "Sim" } },
-        y: { title: { display: true, text: "Racing" } }
+        x: { title: { display: true, text: "Units Sold (Millions)" } },
+        y: { title: { display: true, text: "Revenue (USD Millions)" } }
       }
     }
   };
 }
 
-// DOUGHNUT — member vs casual share for one title + month
+// DOUGHNUT — platform distribution for one title and year
 function doughnutMemberVsCasual(year, title) {
-  const row = chartData.find(r => r.year === year && r.title === title);
+  const rows = chartData.filter(r => r.year === year && r.title === title);
 
-  const member = Math.round(row.memberShare * 100);
-  const casual = 100 - member;
+  const platforms = [...new Set(rows.map(r => r.platform))];
+  const data = platforms.map(p => {
+    const total = rows.filter(r => r.platform === p).reduce((sum, r) => sum + r.unitsM, 0);
+    return total;
+  });
 
   return {
     type: "doughnut",
     data: {
-      labels: ["Members (%)", "Casual (%)"],
-      datasets: [{ label: "Rider mix", data: [member, casual] }]
+      labels: platforms.map(p => `${p}`),
+      datasets: [{ label: "Units by Platform (Millions)", data: data }]
     },
     options: {
       plugins: {
-        title: { display: true, text: `Rider mix: ${title} (${year})` }
+        title: { display: true, text: `Platform Distribution: ${title} (${year})` }
       }
     }
   };
 }
 
-// RADAR — compare neighborhoods across multiple metrics for one month
+// RADAR — compare game titles across key metrics for one year
 function radarCompareNeighborhoods(year) {
   const rows = chartData.filter(r => r.year === year);
+  const uniqueTitles = [...new Set(rows.map(r => r.title))];
 
-  const metrics = ["racing", "rpg", "sandBox", "shooter"];
-  const labels = metrics;
+  const metrics = ["unitsM", "revenueUSD", "reviewScore", "priceUSD"];
+  const metricLabels = ["Units (M)", "Revenue (M)", "Review Score", "Price ($)"];
 
-  const datasets = rows.map(r => ({
-    label: r.title,
-    data: metrics.map(m => r[m])
-  }));
+  const datasets = uniqueTitles.map(title => {
+    const titleRows = rows.filter(r => r.title === title);
+    const avgData = metrics.map(m => {
+      const values = titleRows.map(r => r[m]);
+      return values.reduce((a, b) => a + b, 0) / values.length;
+    });
+    return {
+      label: title,
+      data: avgData
+    };
+  });
 
   return {
     type: "radar",
-    data: { labels, datasets },
+    data: { labels: metricLabels, datasets },
     options: {
       plugins: {
-        title: { display: true, text: `Multi-metric comparison (${year})` }
+        title: { display: true, text: `Game Titles Comparison (${year})` }
       }
     }
   };
